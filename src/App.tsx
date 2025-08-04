@@ -1,11 +1,11 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { PublicLayout } from "@/layouts/public-layout";
 import { AuthenticationLayout } from "@/layouts/auth-layout";
-import {Main} from "@/layouts/main-layout";
+import { MainLayout } from "@/layouts/main-layout";
 import HomePage from "@/routes/home";
 import SignInPage from "./routes/sign-in";
 import SignUpPage from "./routes/sign-up";
-import type ProtectedRoutes from "./layouts/protected-routes";
+import ProtectedRoutes from "./layouts/protected-routes";
 const App = () => {
   return (
     <Router>
@@ -29,6 +29,7 @@ const App = () => {
           }
           >
             {/* add all the protected routes here */}
+        </Route>
         
       </Routes>
     </Router>

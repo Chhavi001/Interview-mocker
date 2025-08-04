@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { UserButton } from "@clerk/clerk-react"
 
 const HomePage = () => {
   return (   
@@ -23,10 +22,10 @@ const HomePage = () => {
               Practice with AI-powered mock interviews and boost your confidence
             </p>
             <div className="space-x-4">
-              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100 hover:scale-105 transition-all duration-200">
                 Start Practice
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600">
+              <Button size="lg" variant="outline" className="border-white text-blue-600 bg-white hover:border-white  hover:text-blue-600 hover:bg-white hover:bg-grey-100 hover:scale-105 transition-all duration-200" title="">
                 Learn More
               </Button>
             </div>
