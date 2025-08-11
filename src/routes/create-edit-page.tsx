@@ -1,16 +1,9 @@
-import FormMockInterview  from "@/components/form-mock-interview";
+import { FormMockInterview } from "@/components/form-mock-interview";
 import { db } from "@/config/firebase.config";
-
+import type { Interview } from "@/types";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-
-// Define Interview type or import it from your types file
-type Interview = {
-  id: string;
-  // Add other fields as per your interview document structure
-  [key: string]: any;
-};
 
 export const CreateEditPage = () => {
   const { interviewId } = useParams<{ interviewId: string }>();

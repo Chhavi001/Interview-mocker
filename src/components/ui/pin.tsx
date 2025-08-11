@@ -1,4 +1,4 @@
-import { Interview } from "@/types";
+import type { Interview } from "@/types";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -6,10 +6,11 @@ import {
   CardFooter,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "./ui/badge";
+import { Badge } from "./badge";
 import { cn } from "@/lib/utils";
 import { TooltipButton } from "./tooltip-button";
 import { Eye, Newspaper, Sparkles } from "lucide-react";
+import { Timestamp } from "firebase/firestore";
 
 interface InterviewPinProps {
   interview: Interview;
@@ -24,18 +25,15 @@ export const InterviewPin = ({
 
   return (
     <Card className="p-4 rounded-md shadow-none hover:shadow-md shadow-gray-100 cursor-pointer transition-all space-y-4">
-      <CardTitle className="text-lg">{interview?.position}</CardTitle>
-      <CardDescription>{interview?.description}</CardDescription>
+      <CardTitle className="text-lg">{interview?.jobPosition}</CardTitle>
+      <CardDescription>{interview?.jobDesc}</CardDescription>
       <div className="w-full flex items-center gap-2 flex-wrap">
-        {interview?.techStack.split(",").map((word, index) => (
-          <Badge
-            key={index}
-            variant={"outline"}
-            className="text-xs text-muted-foreground hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-900"
-          >
-            {word}
-          </Badge>
-        ))}
+        <Badge
+          variant={"outline"}
+          className="text-xs text-muted-foreground hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-900"
+        >
+          {interview?.jobExperience} years experience
+        </Badge>
       </div>
 
       <CardFooter
@@ -45,13 +43,15 @@ export const InterviewPin = ({
         )}
       >
         <p className="text-[12px] text-muted-foreground truncate whitespace-nowrap">
-          {`${new Date(interview?.createdAt.toDate()).toLocaleDateString(
-            "en-US",
-            { dateStyle: "long" }
-          )} - ${new Date(interview?.createdAt.toDate()).toLocaleTimeString(
-            "en-US",
-            { timeStyle: "short" }
-          )}`}
+          {interview?.createdAt && typeof interview.createdAt === 'object' && 'toDate' in interview.createdAt
+            ? `${new Date((interview.createdAt as Timestamp).toDate()).toLocaleDateString(
+                "en-US",
+                { dateStyle: "long" }
+              )} - ${new Date((interview.createdAt as Timestamp).toDate()).toLocaleTimeString(
+                "en-US",
+                { timeStyle: "short" }
+              )}`
+            : 'Date not available'}
         </p>
 
         {!onMockPage && (

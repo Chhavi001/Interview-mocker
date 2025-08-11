@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FormProvider, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 
-import { Interview } from "@/types";
+import type { Interview } from "@/types";
 
-import { CustomBreadCrumb } from "./custom-bread-crumb";
+import { CustomBreadCrumb } from "./ui/custom-bread-crumb";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
@@ -14,6 +14,7 @@ import { Button } from "./ui/button";
 import { Loader, Trash2 } from "lucide-react";
 import { Separator } from "./ui/separator";
 import {
+  Form,
   FormControl,
   FormField,
   FormItem,
@@ -37,12 +38,12 @@ interface FormMockInterviewProps {
 }
 
 const formSchema = z.object({
-  position: z
+  jobPosition: z
     .string()
     .min(1, "Position is required")
     .max(100, "Position must be 100 characters or less"),
-  description: z.string().min(10, "Description is required"),
-  experience: z.coerce
+  jobDesc: z.string().min(10, "Description is required"),
+  jobExperience: z
     .number()
     .min(0, "Experience cannot be empty or negative"),
   techStack: z.string().min(1, "Tech stack must be at least a character"),
@@ -53,7 +54,17 @@ type FormData = z.infer<typeof formSchema>;
 export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {},
+    defaultValues: initialData ? {
+      jobPosition: initialData.jobPosition || "",
+      jobDesc: initialData.jobDesc || "",
+      jobExperience: parseInt(initialData.jobExperience) || 0,
+      techStack: "", // Add default since Interview type doesn't have techStack
+    } : {
+      jobPosition: "",
+      jobDesc: "",
+      jobExperience: 0,
+      techStack: "",
+    },
   });
 
   const { isValid, isSubmitting } = form.formState;
@@ -62,10 +73,10 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
   const { userId } = useAuth();
 
   const title = initialData
-    ? initialData.position
+    ? initialData.jobPosition
     : "Create a new mock interview";
 
-  const breadCrumpPage = initialData ? initialData?.position : "Create";
+  const breadCrumpPage = initialData ? initialData?.jobPosition : "Create";
   const actions = initialData ? "Save Changes" : "Create";
   const toastMessage = initialData
     ? { title: "Updated..!", description: "Changes saved successfully..." }
@@ -95,6 +106,11 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
   };
 
   const generateAiResponse = async (data: FormData) => {
+    // Check if API key is configured
+    if (!import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY === 'your_gemini_api_key_here') {
+      throw new Error('Gemini API key is not configured. Please add your API key to the .env file.');
+    }
+
     const prompt = `
         As an experienced prompt engineer, generate a JSON array containing 5 technical interview questions along with detailed answers based on the following job information. Each object in the array should have the fields "question" and "answer", formatted as follows:
 
@@ -104,18 +120,24 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
         ]
 
         Job Information:
-        - Job Position: ${data?.position}
-        - Job Description: ${data?.description}
-        - Years of Experience Required: ${data?.experience}
+        - Job Position: ${data?.jobPosition}
+        - Job Description: ${data?.jobDesc}
+        - Years of Experience Required: ${data?.jobExperience}
         - Tech Stacks: ${data?.techStack}
 
         The questions should assess skills in ${data?.techStack} development and best practices, problem-solving, and experience handling complex requirements. Please format the output strictly as an array of JSON objects without any additional labels, code blocks, or explanations. Return only the JSON array with questions and answers.
         `;
 
-    const aiResult = await chatSession.sendMessage(prompt);
-    const cleanedResponse = cleanAiResponse(aiResult.response.text());
-
-    return cleanedResponse;
+    try {
+      const aiResult = await chatSession.sendMessage(prompt);
+      const cleanedResponse = cleanAiResponse(aiResult.response.text());
+      return cleanedResponse;
+    } catch (error: any) {
+      if (error.message.includes('API_KEY_INVALID')) {
+        throw new Error('Invalid Gemini API key. Please check your API key in the .env file.');
+      }
+      throw error;
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -127,12 +149,16 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
         if (isValid) {
           const aiResult = await generateAiResponse(data);
 
-          await updateDoc(doc(db, "interviews", initialData?.id), {
-            questions: aiResult,
-            ...data,
-            updatedAt: serverTimestamp(),
-          }).catch((error) => console.log(error));
-          toast(toastMessage.title, { description: toastMessage.description });
+          if (initialData?.id) {
+            await updateDoc(doc(db, "interviews", initialData.id), {
+              jsonMockResp: JSON.stringify(aiResult),
+              jobPosition: data.jobPosition,
+              jobDesc: data.jobDesc,
+              jobExperience: data.jobExperience.toString(),
+              updatedAt: serverTimestamp(),
+            }).catch((error) => console.log(error));
+            toast(toastMessage.title, { description: toastMessage.description });
+          }
         }
       } else {
         // create a new mock interview
@@ -140,9 +166,12 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
           const aiResult = await generateAiResponse(data);
 
           await addDoc(collection(db, "interviews"), {
-            ...data,
-            userId,
-            questions: aiResult,
+            jsonMockResp: JSON.stringify(aiResult),
+            jobPosition: data.jobPosition,
+            jobDesc: data.jobDesc,
+            jobExperience: data.jobExperience.toString(),
+            createdBy: userId || "",
+            mockId: `mock_${Date.now()}`,
             createdAt: serverTimestamp(),
           });
 
@@ -151,10 +180,21 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
       }
 
       navigate("/generate", { replace: true });
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
-      toast.error("Error..", {
-        description: `Something went wrong. Please try again later`,
+      
+      let errorMessage = "Something went wrong. Please try again later.";
+      
+      if (error.message.includes('API key')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('API_KEY_INVALID')) {
+        errorMessage = "Invalid Gemini API key. Please check your .env file.";
+      } else if (error.message.includes('quota')) {
+        errorMessage = "API quota exceeded. Please try again later.";
+      }
+      
+      toast.error("Error", {
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -164,10 +204,10 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
   useEffect(() => {
     if (initialData) {
       form.reset({
-        position: initialData.position,
-        description: initialData.description,
-        experience: initialData.experience,
-        techStack: initialData.techStack,
+        jobPosition: initialData.jobPosition || "",
+        jobDesc: initialData.jobDesc || "",
+        jobExperience: parseInt(initialData.jobExperience) || 0,
+        techStack: "", // Default value since Interview type doesn't have techStack
       });
     }
   }, [initialData, form]);
@@ -193,14 +233,14 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
 
       <div className="my-6"></div>
 
-      <FormProvider {...form}>
+      <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
           className="w-full p-8 rounded-lg flex-col flex items-start justify-start gap-6 shadow-md "
         >
           <FormField
             control={form.control}
-            name="position"
+            name="jobPosition"
             render={({ field }) => (
               <FormItem className="w-full space-y-4">
                 <div className="w-full flex items-center justify-between">
@@ -222,7 +262,7 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
 
           <FormField
             control={form.control}
-            name="description"
+            name="jobDesc"
             render={({ field }) => (
               <FormItem className="w-full space-y-4">
                 <div className="w-full flex items-center justify-between">
@@ -233,7 +273,7 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
                   <Textarea
                     className="h-12"
                     disabled={loading}
-                    placeholder="eg:- describle your job role"
+                    placeholder="eg:- describe your job role"
                     {...field}
                     value={field.value || ""}
                   />
@@ -244,7 +284,7 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
 
           <FormField
             control={form.control}
-            name="experience"
+            name="jobExperience"
             render={({ field }) => (
               <FormItem className="w-full space-y-4">
                 <div className="w-full flex items-center justify-between">
@@ -258,6 +298,7 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
                     disabled={loading}
                     placeholder="eg:- 5 Years"
                     {...field}
+                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                     value={field.value || ""}
                   />
                 </FormControl>
@@ -309,7 +350,7 @@ export const FormMockInterview = ({ initialData }: FormMockInterviewProps) => {
             </Button>
           </div>
         </form>
-      </FormProvider>
+      </Form>
     </div>
   );
 };

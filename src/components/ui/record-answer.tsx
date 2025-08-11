@@ -11,8 +11,14 @@ import {
   WebcamIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import useSpeechToText, { ResultType } from "react-hook-speech-to-text";
+import useSpeechToText from "react-hook-speech-to-text";
 import { useParams } from "react-router-dom";
+
+// Define the Result type based on the library's structure
+type SpeechResult = {
+  transcript: string;
+  timestamp: number;
+};
 import WebCam from "react-webcam";
 import { TooltipButton } from "./tooltip-button";
 import { toast } from "sonner";
@@ -200,7 +206,9 @@ export const RecordAnswer = ({
 
   useEffect(() => {
     const combineTranscripts = results
-      .filter((result): result is ResultType => typeof result !== "string")
+      .filter((result): result is SpeechResult => 
+        typeof result === "object" && result !== null && "transcript" in result
+      )
       .map((result) => result.transcript)
       .join(" ");
 

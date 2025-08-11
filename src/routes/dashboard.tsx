@@ -1,6 +1,9 @@
 import { Headings } from "@/components/headings";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { InterviewPin } from "@/components/ui/pin";
+import type { Interview } from "@/types";
 
 import { db } from "@/config/firebase.config";
 
@@ -9,6 +12,7 @@ import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 
 export const Dashboard = () => {
@@ -17,10 +21,12 @@ export const Dashboard = () => {
   const { userId } = useAuth();
 
   useEffect(() => {
+    if (!userId) return;
+    
     setLoading(true);
     const interviewQuery = query(
       collection(db, "interviews"),
-      where("userId", "==", userId)
+      where("createdBy", "==", userId)
     );
 
     const unsubscribe = onSnapshot(

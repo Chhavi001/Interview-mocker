@@ -1,5 +1,5 @@
 import { db } from "@/config/firebase.config";
-import { Interview, UserAnswer } from "@/types";
+import type { Interview, UserAnswer } from "@/types";
 import { useAuth } from "@clerk/clerk-react";
 import {
   collection,
@@ -13,9 +13,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { LoaderPage } from "./loader-page";
-import { CustomBreadCrumb } from "@/components/custom-bread-crumb";
+import { CustomBreadCrumb } from "@/components/ui/custom-bread-crumb";
 import { Headings } from "@/components/headings";
-import { InterviewPin } from "@/components/pin";
+import { InterviewPin } from "@/components/ui/pin";
 import {
   Accordion,
   AccordionContent,
@@ -39,7 +39,7 @@ export const Feedback = () => {
     navigate("/generate", { replace: true });
   }
   useEffect(() => {
-    if (interviewId) {
+    if (interviewId && userId) {
       const fetchInterview = async () => {
         if (interviewId) {
           try {
@@ -94,7 +94,10 @@ export const Feedback = () => {
     if (feedbacks.length === 0) return "0.0";
 
     const totalRatings = feedbacks.reduce(
-      (acc, feedback) => acc + feedback.rating,
+      (acc, feedback) => {
+        const rating = feedback.rating ? parseFloat(feedback.rating) : 0;
+        return acc + (isNaN(rating) ? 0 : rating);
+      },
       0
     );
 
@@ -113,7 +116,7 @@ export const Feedback = () => {
           breadCrumpItems={[
             { label: "Mock Interviews", link: "/generate" },
             {
-              label: `${interview?.position}`,
+              label: `${interview?.jobPosition}`,
               link: `/generate/interview/${interview?.id}`,
             },
           ]}
@@ -140,12 +143,12 @@ export const Feedback = () => {
         <Accordion type="single" collapsible className="space-y-6">
           {feedbacks.map((feed) => (
             <AccordionItem
-              key={feed.id}
-              value={feed.id}
+              key={feed.id || Math.random().toString()}
+              value={feed.id || Math.random().toString()}
               className="border rounded-lg shadow-md"
             >
               <AccordionTrigger
-                onClick={() => setActiveFeed(feed.id)}
+                onClick={() => setActiveFeed(feed.id || "")}
                 className={cn(
                   "px-5 py-3 flex items-center justify-between text-base rounded-t-lg transition-colors hover:no-underline",
                   activeFeed === feed.id
@@ -169,7 +172,7 @@ export const Feedback = () => {
                   </CardTitle>
 
                   <CardDescription className="font-medium text-gray-700">
-                    {feed.correct_ans}
+                    {feed.correctAns}
                   </CardDescription>
                 </Card>
 
@@ -180,7 +183,7 @@ export const Feedback = () => {
                   </CardTitle>
 
                   <CardDescription className="font-medium text-gray-700">
-                    {feed.user_ans}
+                    {feed.userAns}
                   </CardDescription>
                 </Card>
 

@@ -1,15 +1,18 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { db } from "@/config/firebase.config";
-import { Interview } from "@/types";
+import type { Interview } from "@/types";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { LoaderPage } from "./loader-page";
-import { CustomBreadCrumb } from "@/components/custom-bread-crumb";
+import { CustomBreadCrumb } from "@/components/ui/custom-bread-crumb";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, Sparkles, WebcamIcon } from "lucide-react";
-import { InterviewPin } from "@/components/pin";
+import { InterviewPin } from "@/components/ui/pin";
+// If the alert component exists at a different path, update the import accordingly.
+// Example: If the file is at src/components/alert.tsx, use:
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+// Otherwise, create the file at src/components/ui/alert.tsx if it doesn't exist.
 import WebCam from "react-webcam";
 
 export const MockLoadPage = () => {
@@ -59,7 +62,7 @@ export const MockLoadPage = () => {
     <div className="flex flex-col w-full gap-8 py-5">
       <div className="flex items-center justify-between w-full gap-2">
         <CustomBreadCrumb
-          breadCrumbPage={interview?.position || ""}
+          breadCrumbPage={interview?.jobPosition || ""}
           breadCrumpItems={[{ label: "Mock Interviews", link: "/generate" }]}
         />
 

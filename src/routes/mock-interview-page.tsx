@@ -1,19 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Interview } from "@/types";
+import type { Interview } from "@/types";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { LoaderPage } from "./loader-page";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/config/firebase.config";
-import { CustomBreadCrumb } from "@/components/custom-bread-crumb";
+import { CustomBreadCrumb } from "@/components/ui/custom-bread-crumb";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+// import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Lightbulb } from "lucide-react";
-import { QuestionSection } from "@/components/question-section";
+import { QuestionSection } from "@/components/ui/question-section";
 
 export const MockInterviewPage = () => {
   const { interviewId } = useParams<{ interviewId: string }>();
   const [interview, setInterview] = useState<Interview | null>(null);
+  const [questions, setQuestions] = useState<any[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,10 +28,21 @@ export const MockInterviewPage = () => {
         try {
           const interviewDoc = await getDoc(doc(db, "interviews", interviewId));
           if (interviewDoc.exists()) {
-            setInterview({
+            const interviewData = {
               id: interviewDoc.id,
               ...interviewDoc.data(),
-            } as Interview);
+            } as Interview;
+            
+            setInterview(interviewData);
+            
+            // Parse questions from jsonMockResp
+            try {
+              const parsedQuestions = JSON.parse(interviewData.jsonMockResp);
+              setQuestions(parsedQuestions);
+            } catch (parseError) {
+              console.log("Error parsing questions:", parseError);
+              setQuestions([]);
+            }
           }
         } catch (error) {
           console.log(error);
@@ -61,7 +74,7 @@ export const MockInterviewPage = () => {
         breadCrumpItems={[
           { label: "Mock Interviews", link: "/generate" },
           {
-            label: interview?.position || "",
+            label: interview?.jobPosition || "",
             link: `/generate/interview/${interview?.id}`,
           },
         ]}
@@ -88,9 +101,9 @@ export const MockInterviewPage = () => {
         </Alert>
       </div>
 
-      {interview?.questions && interview?.questions.length > 0 && (
+      {questions && questions.length > 0 && (
         <div className="mt-4 w-full flex flex-col items-start gap-4">
-          <QuestionSection questions={interview?.questions} />
+          <QuestionSection questions={questions} />
         </div>
       )}
     </div>
